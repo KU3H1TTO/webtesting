@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เกมจับคู่อุปกรณ์คอมพิวเตอร์ - รายวิชาระบบปฏิบัติการ</title>
+    <!-- โหลด Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- โหลด FontAwesome สำหรับไอคอน -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- โหลดฟอนต์ภาษาไทย Prompt -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: #f0fdf4;
+            background-image: radial-gradient(#bbf7d0 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        
+        /* แอนิเมชันตอนจับคู่ผิด */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-5px); }
+            40%, 80% { transform: translateX(5px); }
+        }
+        .shake {
+            animation: shake 0.4s ease-in-out;
+        }
+
+        /* ปรับแต่ง Scrollbar สำหรับกล่องข้อความยาวๆ */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+    </style>
+</head>
+<body class="min-h-screen py-8 px-4 flex flex-col items-center">
+
+    <!-- Header & Score -->
+    <div class="max-w-5xl w-full bg-white rounded-2xl shadow-xl p-6 mb-6 text-center border-t-8 border-green-500">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-2">เกมจับคู่อุปกรณ์ฮาร์ดแวร์ 💻</h1>
+        <p class="text-gray-600 mb-4">รายวิชาระบบปฏิบัติการคอมพิวเตอร์: ให้คลิกเลือก "อุปกรณ์" และคลิกเลือก "ความหมาย" ที่ตรงกัน</p>
+        
+        <div class="flex justify-between items-center bg-gray-50 p-4 rounded-xl">
+            <div class="text-lg font-semibold text-gray-700">
+                จับคู่สำเร็จ: <span id="score" class="text-green-600 text-2xl">0</span> / 10
+            </div>
+            <button onclick="initGame()" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-6 rounded-lg transition-colors duration-200 shadow-md flex items-center gap-2">
+                <i class="fas fa-redo"></i> เริ่มเล่นใหม่
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Board -->
+    <div class="max-w-6xl w-full grid grid-cols-1 md:grid-cols-2 gap-8">
+        
+        <!-- Left Column: Hardware / Icons -->
+        <div class="bg-white rounded-2xl shadow-lg p-4 md:p-6">
+            <h2 class="text-xl font-bold text-center text-blue-700 mb-4 border-b-2 border-blue-100 pb-2">
+                <i class="fas fa-microchip mr-2"></i>อุปกรณ์ฮาร์ดแวร์
+            </h2>
+            <div id="hardware-container" class="grid grid-cols-2 gap-3">
+                <!-- ข้อมูลอุปกรณ์จะถูกสร้างด้วย JavaScript -->
+            </div>
+        </div>
+
+        <!-- Right Column: Meanings / Text -->
+        <div class="bg-white rounded-2xl shadow-lg p-4 md:p-6">
+            <h2 class="text-xl font-bold text-center text-purple-700 mb-4 border-b-2 border-purple-100 pb-2">
+                <i class="fas fa-book mr-2"></i>ความหมาย / หน้าที่
+            </h2>
+            <div id="meaning-container" class="grid grid-cols-1 gap-3">
+                <!-- ข้อมูลความหมายจะถูกสร้างด้วย JavaScript -->
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modal Success -->
+    <div id="success-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full text-center shadow-2xl transform scale-95 transition-transform duration-300">
+            <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-check text-4xl text-green-500"></i>
+            </div>
+            <h2 class="text-3xl font-bold text-gray-800 mb-2">ยินดีด้วย! 🎉</h2>
+            <p class="text-gray-600 mb-6">คุณจับคู่อุปกรณ์คอมพิวเตอร์ได้อย่างถูกต้องทั้งหมด</p>
+            <button onclick="closeModalAndRestart()" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-xl transition duration-200">
+                เล่นอีกครั้ง
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ข้อมูลเกม 10 ข้อ (แก้ไขให้ใช้ image แทน icon)
+        // คุณสามารถเปลี่ยนลิงก์ใน 'image' เป็นชื่อไฟล์รูปภาพของคุณได้เลย เช่น 'cpu.jpg' หรือ 'images/ram.png'
+        const gameData = [
+            { id: 1, name: 'CPU', image: 'https://placehold.co/150x150/bfdbfe/1d4ed8?text=CPU', desc: 'หน่วยประมวลผลกลาง ทำหน้าที่เป็นสมองของคอมพิวเตอร์ในการคิดคำนวณและประมวลผลคำสั่ง' },
+            { id: 2, name: 'RAM', image: 'https://placehold.co/150x150/bfdbfe/1d4ed8?text=RAM', desc: 'หน่วยความจำหลักแบบลบเลือนได้ ใช้เก็บข้อมูลชั่วคราวขณะที่โปรแกรมหรือระบบปฏิบัติการกำลังทำงาน' },
+            { id: 3, name: 'Hard Disk / SSD', image: 'https://placehold.co/150x150/bfdbfe/1d4ed8?text=HDD/SSD', desc: 'หน่วยความจำสำรองสำหรับเก็บข้อมูล ถาวร เช่น ระบบปฏิบัติการ โปรแกรม และไฟล์งานต่างๆ' },
+            { id: 4, name: 'Mainboard', image: 'https://placehold.co/150x150/bfdbfe/1d4ed8?text=Mainboard', desc: 'แผงวงจรหลักที่ทำหน้าที่เป็นศูนย์กลางเชื่อมต่อและให้อุปกรณ์ทุกชิ้นสื่อสารกันได้' },
+            { id: 5, name: 'Power Supply', image: 'https://placehold.co/150x150/bfdbfe/1d4ed8?text=PSU', desc: 'อุปกรณ์ทำหน้าที่แปลงกระแสไฟฟ้าและจ่ายไฟให้กับชิ้นส่วนต่างๆ ภายในเครื่องคอมพิวเตอร์' },
+            { id: 6, name: 'GPU (VGA Card)', image: 'https://placehold.co/150x150/bfdbfe/1d4ed8?text=GPU', desc: 'หน่วยประมวลผลกราฟิก ทำหน้าที่ประมวลผลข้อมูลเพื่อแสดงผลออกมาเป็นภาพบนหน้าจอ' },
+            { id: 7, name: 'Monitor', image: 'https://placehold.co/150x150/bfdbfe/1d4ed8?text=Monitor', desc: 'อุปกรณ์แสดงผล (Output Device) ทำหน้าที่แสดงภาพ ข้อความ หรือข้อมูลให้ผู้ใช้มองเห็น' },
+            { id: 8, name: 'Keyboard & Mouse', image: 'https://placehold.co/150x150/bfdbfe/1d4ed8?text=Key/Mouse', desc: 'อุปกรณ์รับข้อมูลเข้า (Input Device) ที่ใช้สำหรับพิมพ์ข้อความและคลิกสั่งการระบบปฏิบัติการ' },
+            { id: 9, name: 'Network Card', image: 'https://placehold.co/150x150/bfdbfe/1d4ed8?text=Network', desc: 'การ์ดเครือข่ายที่ทำให้คอมพิวเตอร์สามารถเชื่อมต่อกับอินเทอร์เน็ตหรือเครือข่ายแลน (LAN) ได้' },
+            { id: 10, name: 'Cooling System', image: 'https://placehold.co/150x150/bfdbfe/1d4ed8?text=Cooling', desc: 'พัดลมหรือระบบระบายความร้อน ช่วยลดอุณหภูมิป้องกันไม่ให้อุปกรณ์ภายในร้อนเกินไปขณะทำงาน' }
+        ];
+
+        // ตัวแปรสถานะของเกม
+        let hardwareItems = [];
+        let meaningItems = [];
+        let selectedHardware = null;
+        let selectedMeaning = null;
+        let matchedPairs = 0;
+
+        // ฟังก์ชันสุ่มลำดับ Array (Fisher-Yates Shuffle)
+        function shuffleArray(array) {
+            let newArray = [...array];
+            for (let i = newArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+            }
+            return newArray;
+        }
+
+        // เริ่มต้นเกมใหม่
+        function initGame() {
+            matchedPairs = 0;
+            selectedHardware = null;
+            selectedMeaning = null;
+            document.getElementById('score').innerText = '0';
+            
+            // สุ่มลำดับรายการแยกกัน
+            hardwareItems = shuffleArray(gameData);
+            meaningItems = shuffleArray(gameData);
+
+            renderBoard();
+        }
+
+        // สร้างปุ่มและแสดงผลบนหน้าจอ
+        function renderBoard() {
+            const hwContainer = document.getElementById('hardware-container');
+            const mnContainer = document.getElementById('meaning-container');
+            
+            hwContainer.innerHTML = '';
+            mnContainer.innerHTML = '';
+
+            // สร้างปุ่มฮาร์ดแวร์ (อัปเดตให้แสดงรูปภาพ)
+            hardwareItems.forEach(item => {
+                const btn = document.createElement('button');
+                btn.className = 'hardware-btn flex flex-col items-center justify-center p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 cursor-pointer shadow-sm min-h-[120px] text-gray-700';
+                btn.dataset.id = item.id;
+                btn.onclick = () => selectHardware(btn, item.id);
+                
+                // ใช้แท็ก <img> แทน <i> 
+                btn.innerHTML = `
+                    <img src="${item.image}" alt="${item.name}" class="h-16 w-16 object-contain mb-3 rounded-lg shadow-sm">
+                    <span class="font-semibold text-sm md:text-base text-center">${item.name}</span>
+                `;
+                hwContainer.appendChild(btn);
+            });
+
+            // สร้างปุ่มความหมาย
+            meaningItems.forEach(item => {
+                const btn = document.createElement('button');
+                btn.className = 'meaning-btn text-left p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-purple-400 hover:bg-purple-50 transition-all duration-200 cursor-pointer shadow-sm min-h-[80px] text-gray-700 text-sm md:text-base flex items-center';
+                btn.dataset.id = item.id;
+                btn.onclick = () => selectMeaning(btn, item.id);
+                
+                btn.innerHTML = `<span>${item.desc}</span>`;
+                mnContainer.appendChild(btn);
+            });
+        }
+
+        // เมื่อเลือกฮาร์ดแวร์
+        function selectHardware(btnElement, id) {
+            // ถ้ารายการนี้ถูกจับคู่ไปแล้ว ให้กดไม่ได้
+            if (btnElement.classList.contains('matched')) return;
+
+            // ลบการเลือกเดิม
+            document.querySelectorAll('.hardware-btn:not(.matched)').forEach(el => {
+                el.classList.remove('ring-4', 'ring-blue-400', 'bg-blue-100', 'border-blue-400');
+                el.classList.add('border-gray-200');
+            });
+
+            // ตั้งค่าการเลือกใหม่
+            selectedHardware = { id: id, element: btnElement };
+            btnElement.classList.remove('border-gray-200', 'hover:bg-blue-50');
+            btnElement.classList.add('ring-4', 'ring-blue-400', 'bg-blue-100', 'border-blue-400');
+
+            checkMatch();
+        }
+
+        // เมื่อเลือกความหมาย
+        function selectMeaning(btnElement, id) {
+            // ถ้ารายการนี้ถูกจับคู่ไปแล้ว ให้กดไม่ได้
+            if (btnElement.classList.contains('matched')) return;
+
+            // ลบการเลือกเดิม
+            document.querySelectorAll('.meaning-btn:not(.matched)').forEach(el => {
+                el.classList.remove('ring-4', 'ring-purple-400', 'bg-purple-100', 'border-purple-400');
+                el.classList.add('border-gray-200');
+            });
+
+            // ตั้งค่าการเลือกใหม่
+            selectedMeaning = { id: id, element: btnElement };
+            btnElement.classList.remove('border-gray-200', 'hover:bg-purple-50');
+            btnElement.classList.add('ring-4', 'ring-purple-400', 'bg-purple-100', 'border-purple-400');
+
+            checkMatch();
+        }
+
+        // ตรวจสอบว่าตรงกันหรือไม่
+        function checkMatch() {
+            if (selectedHardware && selectedMeaning) {
+                const hw = selectedHardware.element;
+                const mn = selectedMeaning.element;
+
+                if (selectedHardware.id === selectedMeaning.id) {
+                    // ดึงข้อมูลไอเท็มที่จับคู่ถูก
+                    const matchedItem = gameData.find(item => item.id === selectedHardware.id);
+
+                    // จับคู่ถูกต้อง (ปรับการแสดงผลรูปภาพเมื่อจับคู่ถูก)
+                    hw.className = 'hardware-btn matched flex flex-col items-center justify-center p-4 bg-green-100 border-2 border-green-500 rounded-xl text-green-800 opacity-60 cursor-default min-h-[120px] transition-all duration-300 transform scale-95 shadow-inner';
+                    hw.innerHTML = `
+                        <div class="relative mb-2">
+                            <img src="${matchedItem.image}" class="h-12 w-12 object-contain rounded-lg grayscale opacity-50 mx-auto">
+                            <i class="fas fa-check-circle text-3xl absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-green-600 drop-shadow-md"></i>
+                        </div>
+                        <span class="font-semibold text-sm md:text-base text-center line-through">${matchedItem.name}</span>
+                    `;
+
+                    mn.className = 'meaning-btn matched text-left p-4 bg-green-100 border-2 border-green-500 rounded-xl text-green-800 opacity-60 cursor-default min-h-[80px] transition-all duration-300 transform scale-95 shadow-inner flex items-center';
+                    mn.innerHTML = `<i class="fas fa-check text-green-600 mr-3 text-xl"></i> <span class="line-through">${mn.innerText}</span>`;
+
+                    matchedPairs++;
+                    document.getElementById('score').innerText = matchedPairs;
+
+                    // รีเซ็ตการเลือก
+                    selectedHardware = null;
+                    selectedMeaning = null;
+
+                    // ชนะเกม
+                    if (matchedPairs === gameData.length) {
+                        setTimeout(showWinModal, 500);
+                    }
+                } else {
+                    // จับคู่ผิด
+                    hw.classList.add('shake', 'bg-red-100', 'border-red-500', 'ring-red-400');
+                    mn.classList.add('shake', 'bg-red-100', 'border-red-500', 'ring-red-400');
+                    
+                    // ป้องกันการกดปุ่มอื่นระหว่างแสดงแอนิเมชันผิด
+                    document.querySelectorAll('button').forEach(b => b.style.pointerEvents = 'none');
+
+                    setTimeout(() => {
+                        hw.classList.remove('shake', 'bg-red-100', 'border-red-500', 'ring-4', 'ring-blue-400', 'bg-blue-100', 'border-blue-400', 'ring-red-400');
+                        hw.classList.add('border-gray-200');
+                        
+                        mn.classList.remove('shake', 'bg-red-100', 'border-red-500', 'ring-4', 'ring-purple-400', 'bg-purple-100', 'border-purple-400', 'ring-red-400');
+                        mn.classList.add('border-gray-200');
+
+                        selectedHardware = null;
+                        selectedMeaning = null;
+                        
+                        // คืนค่าการกดปุ่ม
+                        document.querySelectorAll('button').forEach(b => b.style.pointerEvents = 'auto');
+                    }, 600);
+                }
+            }
+        }
+
+        // แสดง Modal ยินดีด้วย
+        function showWinModal() {
+            const modal = document.getElementById('success-modal');
+            const modalContent = modal.querySelector('div');
+            
+            modal.classList.remove('hidden');
+            // Allow display block to apply before changing opacity
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+                modalContent.classList.add('scale-100');
+            }, 10);
+        }
+
+        // ปิด Modal และเริ่มใหม่
+        function closeModalAndRestart() {
+            const modal = document.getElementById('success-modal');
+            const modalContent = modal.querySelector('div');
+            
+            modal.classList.add('opacity-0');
+            modalContent.classList.remove('scale-100');
+            modalContent.classList.add('scale-95');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                initGame();
+            }, 300);
+        }
+
+        // เริ่มเกมตอนโหลดหน้าเว็บ
+        window.onload = initGame;
+    </script>
+</body>
+</html>
